@@ -1,0 +1,25 @@
+column_name,percent_missing
+Case ID,0.0
+Activity,0.0
+Resource,0.0
+Start Timestamp,0.0
+Complete Timestamp,0.0
+Variant,0.0
+Variant index,0.0
+lifecycle:transition,0.0
+EventOrigin,0.0
+EventID,0.0
+Action,0.0
+LoanGoal,0.0
+ApplicationType,0.0
+RequestedAmount,0.0
+FirstWithdrawalAmount,92.18554354012521
+NumberOfTerms,92.18554354012521
+Accepted,92.18554354012521
+MonthlyCost,92.18554354012521
+Selected,92.18554354012521
+CreditScore,92.18554354012521
+OfferedAmount,92.18554354012521
+OfferID,68.98121798520205
+startTime,0.0
+completeTime,0.0
