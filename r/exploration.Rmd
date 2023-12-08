@@ -1,0 +1,197 @@
+---
+title: "adv_pm"
+author: "Gianluca Bortoluzzi 240424"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    theme: readable
+    toc: true
+    toc_float: true
+  pdf_document:
+    latex_engine: xelatex	
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+library(conflicted)
+conflicts_prefer(dplyr::select())
+
+knitr::opts_chunk$set(warning=FALSE,
+                      message=FALSE,
+                      tidy.opts=list(width.cutoff = 60),
+                      tidy = TRUE)
+knitr::opts_knit$set(global.par=TRUE)
+
+# built-in output hook
+hook_output <- knitr::knit_hooks$get("output")
+# custom chunk option output.lines to truncate text output
+knitr::knit_hooks$set(output = function(x, options) {
+  n <- options$output.lines
+  if (!is.null(n)) {
+      x <- xfun::split_lines(x)
+      if(length(x) > n) {
+          top <- head(x, n)
+          bot <- tail(x, n)
+          x <- c(top, "\n....\n", bot)
+      }
+      x <- paste(x, collapse="\n")
+  }
+  hook_output(x, options)
+})
+```
+
+```{r}
+library(tidyverse)
+###### Change the wd based on your enviroment
+setwd("C:/Users/gianl/Desktop/0_TUe materials/AssignmentPM/adv-pm/r")
+data <- read_csv("BPI_Challenge_2017_filtered.csv") 
+```
+
+```{r}
+data
+```
+
+```{r}
+# keep only interesting columns: Identification (Case ID, Activity, Start Timestamp, Variant index) Features (NumberOfTerms, OfferedAmount, MonthlyCost) and Target variable (Selected)
+
+selected_columns <- data %>% select("Case ID", "Activity", "Start Timestamp", "Variant index", "NumberOfTerms", "OfferedAmount", "MonthlyCost", "CreditScore", "OfferID", "Selected")
+selected_columns
+```
+
+```{r}
+# keep only the rows that have a value in the column "OfferID" and/or "Selected" AND have the value "O_Create Offer" or "O_Created" in the column "Activity" 
+
+filtered_data <- selected_columns %>% dplyr::filter((!is.na(OfferID) | !is.na(Selected)) & (Activity == "O_Create Offer" | Activity == "O_Created"))
+filtered_data
+```
+
+```{r}
+# copy the value in OfferID of each row in the row that comes before it
+modified_data <- filtered_data %>%
+  fill(OfferID, .direction = "up")
+
+# then delete the column that originally contained OfferID and count the number of non-zero values in "CreditScore" (to later check)
+final_data <- modified_data %>%
+  dplyr::filter(!is.na(Selected))
+final_data
+sum(final_data$CreditScore != 0, na.rm = TRUE)
+```
+
+```{r}
+#  for each instance in which more than one row has the same "Case ID" I want to check if there is a non-missing value bigger than 0 in the column "CreditScore" for each row with the same "Case ID". If there is at least one, I want to copy it and paste it in the other rows with the same "Case ID" that have a missing value or 0-value in the column "CreditScore" 
+final_data_zero <- final_data %>%
+  group_by(`Case ID`) %>%
+  mutate(
+    CreditScore = ifelse(any(CreditScore > 0 & !is.na(CreditScore)), max(CreditScore[CreditScore > 0]), CreditScore)
+  ) %>%
+  ungroup()
+
+final_data_zero
+
+# check if changes were made (yesss)
+sum(final_data$CreditScore != 0, na.rm = TRUE)
+
+final_data_median <- final_data %>%
+  mutate(CreditScore = ifelse(CreditScore == 0 | is.na(CreditScore), median(CreditScore[CreditScore != 0], na.rm = TRUE), CreditScore))
+
+final_data_median
+
+# I am keeping both dataframes with 0 and median value (>0) because I'm not sure of what choice is theoretically correct 
+
+
+final_data_erase <- final_data %>%
+  dplyr::filter(CreditScore != 0)
+final_data_erase
+sum(final_data_erase$CreditScore != 0, na.rm = TRUE)
+```
+
+## Preliminar Analysis
+
+Correlation between Features and Target variable (pairwise?)
+
+Feature Importance (Hierarchical Regression or smt_else)
+
+Logistic Regression
+
+Decision Trees
+
+```{r}
+cor_matrix <- final_data %>%
+  select(NumberOfTerms, OfferedAmount, MonthlyCost, Selected) %>% 
+  cor()
+cor_matrix
+library(corrplot)
+# Customize the correlation plot if needed
+corrplot(cor_matrix, method = "color")
+```
+
+```{r}
+cor_matrix <- final_data_median %>%
+  select(NumberOfTerms, OfferedAmount, MonthlyCost, CreditScore, Selected) %>% 
+  cor()
+cor_matrix
+library(corrplot)
+# Customize the correlation plot if needed
+corrplot(cor_matrix, method = "color")
+```
+
+the correlation with creditscore is insignificant because 100% of the cases that have a creditscore != 0 also have [offers selected == true]
+
+```{r}
+
+attach(final_data)
+
+
+glm.fits <- glm(Selected ~ NumberOfTerms + OfferedAmount + MonthlyCost + CreditScore,
+    data = final_data,
+    family = binomial
+) # family=binomial selects a Logistic Regression model
+glm.fits
+summary(glm.fits)
+```
+
+```{r}
+glm.probs <- predict(glm.fits, type = "response")
+glm.probs[1:50]
+```
+
+```{r}
+contrasts(Selected)
+glm.pred <- rep("Down", nrow(final_data)) # create a "placeholder" filled with as many Down values as the number of observations (rows) in dataf
+glm.pred[glm.probs > 0.5] <- "Up" # replace with Up values according to the glm.probs threshold
+```
+
+```{r}
+library(tidymodels)
+lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
+    set_engine("glm") %>% # declare which package will be used to fit the model
+    set_mode("classification") # set model's mode to classification
+lr_fit <- lr_spec %>%
+    fit(as.factor(Selected) ~ NumberOfTerms + OfferedAmount + MonthlyCost + CreditScore,
+        data = final_data,
+        )
+
+lr_fit
+lr_stats <- tidy(lr_fit)
+lr_stats
+```
+
+```{r}
+predict(lr_fit, new_data = final_data, type = "prob")
+predict(lr_fit, new_data = dataf, type = "class")
+
+# confusion matrix
+table(glm.pred, Selected) # predictions vs truth
+
+# correct predictions / total observations
+# "by hand" (the horror...)
+#(507 + 145) / 1250
+
+# equivalent but more elegant
+mean(glm.pred == Selected)
+
+# and of course we could also compute the error ("!=" means "not equal to")
+mean(glm.pred != Selected)
+```
