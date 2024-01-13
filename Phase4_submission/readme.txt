@@ -12,4 +12,5 @@ Make sure to run the script in the same path you find it. It is important so tha
                         -GBC Implementation
                           → the tuning of the parameter takes a long time, but we left it 
                             for transparence. You can avoid to run that chunk.
+
 3) To see the visualizations used in the report, run also the section "Visualizations"
