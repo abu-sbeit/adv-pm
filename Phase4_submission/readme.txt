@@ -1,8 +1,10 @@
 How to run the implementation.
 Make sure to run the script in the same path you find it. It is important so that the code can work properly.
 
-Disclamer: there is no separated "model file". By running the implementation of the 2 models you will see the results.
-Github repository: "https://github.com/abu-sbeit/adv-pm"
+Disclamer: 
+  a) there is no separated "model file". By running the implementation of the 2 models you will see the results.
+  b) All the other files can be seen at the github repository, please refer to it at: 
+      Github repository "https://github.com/abu-sbeit/adv-pm"
 
 0) Open the directory: "python"
 
