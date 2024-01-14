@@ -1,6 +1,8 @@
 How to run the implementation.
 Make sure to run the script in the same path you find it. It is important so that the code can work properly.
 
+Disclamer: there is no separated "model file". By running the implementation of the 2 models you will see the results.
+
 1) To see all the steps done, comprehensive of the first data filtering on python (the data used was pre-processed in Disco)
     Open the jupyter notebook: "A_data_loading.ipynb" 
 
